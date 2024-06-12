@@ -31,6 +31,9 @@ export class Vector3 {
     dot(other) {
         return this.x * this.x + this.y * other.y + this.z * other.z;
     }
+    print() {
+        console.log("x: " + this.x + ", y: " + this.y + ", z:" + this.z);
+    }
 }
 export class Matrix3 {
     constructor(x1, x2, x3, y1, y2, y3, z1, z2, z3) {

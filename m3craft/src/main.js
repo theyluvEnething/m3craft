@@ -1,6 +1,6 @@
 import { WebGL } from "./webgl.js";
 import { Camera, Triangle, Plane, Cube } from "./camera.js";
-import { Matrix4, Vector2, Vector3 } from "./definitions.js";
+import { Matrix4, Vector3 } from "./definitions.js";
 //import { Shader } from "./shader.js";
 console.log("Starting M3Craft!");
 const renderer = new WebGL();
@@ -8,21 +8,20 @@ const camera = new Camera();
 let width = renderer.getCanvasSize()[0]; // appr. 800 
 let height = renderer.getCanvasSize()[1]; // appr. 600
 var dragging = false;
-function render() {
+var debug = false;
+let ptimestamp = 0;
+let framerateElement = document.getElementById('framerate');
+function render(timestamp) {
     var _a, _b, _c;
     (_a = renderer.webgl) === null || _a === void 0 ? void 0 : _a.clearColor(0.0, 0.0, 0.0, 1.0);
     (_b = renderer.webgl) === null || _b === void 0 ? void 0 : _b.clear(renderer.webgl.COLOR_BUFFER_BIT);
     (_c = renderer.webgl) === null || _c === void 0 ? void 0 : _c.useProgram(renderer.programInfo.program);
-    //renderer.pdraw_line(-0.55, 0.5, 0.5, 0.5, 100);
-    // webgl.pdraw_line(-0.5, 0.5, -0.5, -0.5, 100);
-    // webgl.pdraw_line(0.5, 0.5, 0.5, -0.5, 100);
-    // webgl.pdraw_line(-0.5, -0.5, 0.5, -0.5, 100);
-    let a = new Vector2(1, 2);
-    camera.edges.forEach(edge => {
-        let v0 = camera.project_vertex(camera.vertices[edge[0]]);
-        let v1 = camera.project_vertex(camera.vertices[edge[1]]);
-        renderer.vdrawl_line(v0, v1, 2);
-    });
+    let frametime = timestamp - ptimestamp;
+    ptimestamp = timestamp;
+    debug ? console.log("frame took " + frametime + "ms to render.") : (1);
+    framerateElement.textContent = "" + Math.round(1000 / frametime);
+    // camera.yaw += 3.5;
+    // camera.pitch += 0.7;
     let triangles = [
         new Triangle(new Vector3(100, 100, 100), new Vector3(-100, -100, 100), new Vector3(100, -100, 100)),
         new Triangle(new Vector3(100, 100, 100), new Vector3(-100, -100, 100), new Vector3(-100, 100, 100)),
@@ -55,14 +54,15 @@ function render() {
         new Cube(new Vector3(0, 200, 0), 100),
         new Cube(new Vector3(0, -200, -200), 100)
     ];
-    let heading = camera.yaw * (Math.PI / 180); // Convert degrees to radians
+    let yaw = camera.yaw * (Math.PI / 180); // Convert degrees to radians
     let pitch = camera.pitch * (Math.PI / 180);
-    let headingTransform = new Matrix4(Math.cos(heading), 0, -Math.sin(heading), 0, 0, 1, 0, 0, Math.sin(heading), 0, Math.cos(heading), 0, 0, 0, 0, 1);
+    let yawTransform = new Matrix4(Math.cos(yaw), 0, -Math.sin(yaw), 0, 0, 1, 0, 0, Math.sin(yaw), 0, Math.cos(yaw), 0, 0, 0, 0, 1);
     let pitchTransform = new Matrix4(1, 0, 0, 0, 0, Math.cos(pitch), Math.sin(pitch), 0, 0, -Math.sin(pitch), Math.cos(pitch), 0, 0, 0, 0, 1);
-    let transformMatrix = headingTransform.multiply(pitchTransform);
-    var translationMatrix = new Matrix4(1, 0, 0, camera.position.x, 0, 1, 0, camera.position.y, 0, 0, 1, camera.position.z, 0, 0, 0, 1);
-    transformMatrix = transformMatrix.multiply(translationMatrix);
-    transformMatrix.print();
+    var translationMatrix = new Matrix4(1, 0, 0, -camera.position.x, 0, 1, 0, -camera.position.y, 0, 0, 1, -camera.position.z, 0, 0, 0, 1);
+    let transformMatrix = translationMatrix.multiply(yawTransform).multiply(pitchTransform);
+    // transformMatrix = transformMatrix.multiply(translationMatrix);
+    //transformMatrix.print();
+    camera.position.print();
     // let heading = rotationX * (3.14159/180);
     // let headingTransform : Matrix3 = new Matrix3(
     //         Math.cos(heading), 0, -Math.sin(heading),
@@ -90,15 +90,15 @@ function render() {
             renderer.draw_line([point2.x, point2.y], [point4.x, point4.y], 1);
         });
     });
-    return;
-    triangles.forEach(triangle => {
-        let point1 = transformMatrix.worldToScreen(triangle.v1);
-        let point2 = transformMatrix.worldToScreen(triangle.v2);
-        let point3 = transformMatrix.worldToScreen(triangle.v3);
-        renderer.draw_line([point1.x, point1.y], [point2.x, point2.y], 1);
-        renderer.draw_line([point3.x, point3.y], [point2.x, point2.y], 1);
-        renderer.draw_line([point3.x, point3.y], [point1.x, point1.y], 1);
-    });
+    // triangles.forEach(triangle => {
+    //     let point1 : Vector3 = transformMatrix.worldToScreen(triangle.v1)
+    //     let point2 : Vector3 = transformMatrix.worldToScreen(triangle.v2)
+    //     let point3 : Vector3 = transformMatrix.worldToScreen(triangle.v3)
+    //     renderer.draw_line([point1.x, point1.y], [point2.x, point2.y], 1);
+    //     renderer.draw_line([point3.x, point3.y], [point2.x, point2.y], 1);
+    //     renderer.draw_line([point3.x, point3.y], [point1.x, point1.y], 1);
+    // });
+    requestAnimationFrame(render);
 }
 render();
 let oldMouseX = 0;
@@ -117,41 +117,44 @@ function moveCamera(mouseX, mouseY) {
     oldMouseX = mouseX;
     oldMouseY = mouseY;
     // console.log("x: " + camera.yaw + " y: " + camera.pitch)
-    render();
 }
 document.addEventListener('keydown', function (event) {
     switch (event.keyCode) {
         case 87:
             { // W
                 camera.position.z += 1;
-                console.log("[W] was pressed.");
+                debug ? console.log("[W] was pressed.") : (1);
             }
             break;
         case 83:
             { // S
                 camera.position.z -= 1;
-                console.log("[S] was pressed.");
+                debug ? console.log("[S] was pressed.") : (1);
             }
             break;
         case 68:
             { // D
                 camera.position.x += 1;
-                console.log("[D] was pressed.");
+                debug ? console.log("[D] was pressed.") : (1);
             }
             break;
         case 65:
             { // A
                 camera.position.x -= 1;
-                console.log("[A] was pressed.");
+                debug ? console.log("[A] was pressed.") : (1);
+            }
+            break;
+        case 32:
+            {
+                camera.yaw += 1.3;
             }
             break;
         default:
             {
-                console.log("Other Button pressed.");
+                debug ? console.log("Other Button pressed.") : (1);
             }
             break;
     }
-    render();
 });
 document.addEventListener('mousemove', function (event) {
     if (dragging)
@@ -181,8 +184,7 @@ document.addEventListener('wheel', function (event) {
     // camera.projectionmatrix[0] = camera.far / (camera.aspectratio * Math.tan(fovRadians / 2));
     // camera.projectionmatrix[5] = camera.far / Math.tan(fovRadians / 2);
     // camera.projectionmatrix[10] = (camera.far + camera.near) / (camera.far - camera.near);
-    // camera.projectionmatrix[11] = (-2 * camera.far * camera.near) / (camera.far - camera.near);
-    render(); // Re-render the scene with the new projection matrix
+    // camera.projectionmatrix[11] = (-2 * camera.far * camera.near) / (camera.far - camera.near);    
 });
 function clamp(value, floor, ceil) {
     return min(max(value, floor), ceil);

@@ -55,6 +55,10 @@ export class Vector3 {
     public dot(other: Vector3) : number {
         return this.x*this.x + this.y*other.y + this.z*other.z;
     } 
+
+    public print() : void {
+        console.log("x: " + this.x + ", y: " + this.y + ", z:" + this.z);
+    }
 }
 
 export class Matrix3 {

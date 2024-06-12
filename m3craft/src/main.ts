@@ -13,28 +13,24 @@ const camera = new Camera();
 let width  = renderer.getCanvasSize()[0]; // appr. 800 
 let height = renderer.getCanvasSize()[1]; // appr. 600
 var dragging : boolean = false
+var debug : boolean = false;
 
+let ptimestamp : number = 0;
+let framerateElement : HTMLElement = document.getElementById('framerate') as HTMLElement
 
-
-
-function render() {
+function render(timestamp: number) {
     renderer.webgl?.clearColor(0.0, 0.0, 0.0, 1.0);
     renderer.webgl?.clear(renderer.webgl.COLOR_BUFFER_BIT);
     renderer.webgl?.useProgram(renderer.programInfo.program);
 
-    //renderer.pdraw_line(-0.55, 0.5, 0.5, 0.5, 100);
-    // webgl.pdraw_line(-0.5, 0.5, -0.5, -0.5, 100);
-    // webgl.pdraw_line(0.5, 0.5, 0.5, -0.5, 100);
-    // webgl.pdraw_line(-0.5, -0.5, 0.5, -0.5, 100);
+    let frametime = timestamp-ptimestamp; 
+    ptimestamp = timestamp;
+    
+    debug ? console.log("frame took " + frametime + "ms to render.") : (1);
+    framerateElement.textContent = ""+Math.round(1000/frametime);
+    // camera.yaw += 3.5;
+    // camera.pitch += 0.7;
 
-    let a : Vector2 = new Vector2(1,2);
-
-    camera.edges.forEach(edge => {
-        let v0 = camera.project_vertex(camera.vertices[edge[0]]);
-        let v1 = camera.project_vertex(camera.vertices[edge[1]]);
-
-        renderer.vdrawl_line(v0, v1, 2);
-    });
 
     let triangles = [
         new Triangle(
@@ -112,13 +108,13 @@ function render() {
 
 
 
-    let heading = camera.yaw * (Math.PI / 180);  // Convert degrees to radians
+    let yaw = camera.yaw * (Math.PI / 180);  // Convert degrees to radians
     let pitch = camera.pitch * (Math.PI / 180);
 
-    let headingTransform: Matrix4 = new Matrix4(
-        Math.cos(heading), 0, -Math.sin(heading), 0,
+    let yawTransform: Matrix4 = new Matrix4(
+        Math.cos(yaw), 0, -Math.sin(yaw), 0,
         0, 1, 0, 0,
-        Math.sin(heading), 0, Math.cos(heading), 0,
+        Math.sin(yaw), 0, Math.cos(yaw), 0,
         0, 0, 0, 1
     );
 
@@ -129,16 +125,18 @@ function render() {
         0, 0, 0, 1
     );
 
-    let transformMatrix: Matrix4 = headingTransform.multiply(pitchTransform);
+    var translationMatrix : Matrix4 = new Matrix4(1, 0, 0, -camera.position.x,
+                                                    0, 1, 0, -camera.position.y,
+                                                    0, 0, 1, -camera.position.z,
+                                                    0, 0, 0, 1);
 
+    let transformMatrix: Matrix4 = translationMatrix.multiply(yawTransform).multiply(pitchTransform);
 
-    var translationMatrix : Matrix4 = new Matrix4(1, 0, 0, camera.position.x,
-                                   0, 1, 0, camera.position.y,
-                                   0, 0, 1, camera.position.z,
-                                   0, 0, 0, 1);
+        
+    // transformMatrix = transformMatrix.multiply(translationMatrix);
+    //transformMatrix.print();
 
-    transformMatrix = transformMatrix.multiply(translationMatrix);
-    transformMatrix.print();
+    camera.position.print();
 
     // let heading = rotationX * (3.14159/180);
     // let headingTransform : Matrix3 = new Matrix3(
@@ -175,25 +173,22 @@ function render() {
 
 
 
-    return;
+    // triangles.forEach(triangle => {
 
-    triangles.forEach(triangle => {
+    //     let point1 : Vector3 = transformMatrix.worldToScreen(triangle.v1)
+    //     let point2 : Vector3 = transformMatrix.worldToScreen(triangle.v2)
+    //     let point3 : Vector3 = transformMatrix.worldToScreen(triangle.v3)
 
-        let point1 : Vector3 = transformMatrix.worldToScreen(triangle.v1)
-        let point2 : Vector3 = transformMatrix.worldToScreen(triangle.v2)
-        let point3 : Vector3 = transformMatrix.worldToScreen(triangle.v3)
-
-        renderer.draw_line([point1.x, point1.y], [point2.x, point2.y], 1);
-        renderer.draw_line([point3.x, point3.y], [point2.x, point2.y], 1);
-        renderer.draw_line([point3.x, point3.y], [point1.x, point1.y], 1);
+    //     renderer.draw_line([point1.x, point1.y], [point2.x, point2.y], 1);
+    //     renderer.draw_line([point3.x, point3.y], [point2.x, point2.y], 1);
+    //     renderer.draw_line([point3.x, point3.y], [point1.x, point1.y], 1);
 
 
-    });
+    // });
 
  
+    requestAnimationFrame(render);
 } render();
-
-
 
 
 
@@ -223,7 +218,7 @@ function moveCamera(mouseX: number, mouseY: number) {
 
     // console.log("x: " + camera.yaw + " y: " + camera.pitch)
 
-    render();
+    
 }
 
     
@@ -231,25 +226,27 @@ document.addEventListener('keydown', function(event) {
     switch (event.keyCode) {
         case 87: { // W
             camera.position.z += 1;
-            console.log("[W] was pressed.")
+            debug ? console.log("[W] was pressed.") : (1);
         } break;
         case 83: { // S
             camera.position.z -= 1;
-            console.log("[S] was pressed.")
+            debug ? console.log("[S] was pressed.") : (1);
         } break;
         case 68: { // D
             camera.position.x += 1;
-            console.log("[D] was pressed.")
+            debug ? console.log("[D] was pressed.") : (1);
         } break;
         case 65: { // A
             camera.position.x -= 1;
-            console.log("[A] was pressed.")
+            debug ? console.log("[A] was pressed.") : (1);
+        } break;
+        case 32: {
+            camera.yaw += 1.3;
         } break;
         default: {
-            console.log("Other Button pressed.")
+            debug ? console.log("Other Button pressed.") : (1);
         } break;
     }
-    render();
 });
 
 document.addEventListener('mousemove', function(event) {
@@ -283,8 +280,7 @@ document.addEventListener('wheel', function(event) {
     // camera.projectionmatrix[0] = camera.far / (camera.aspectratio * Math.tan(fovRadians / 2));
     // camera.projectionmatrix[5] = camera.far / Math.tan(fovRadians / 2);
     // camera.projectionmatrix[10] = (camera.far + camera.near) / (camera.far - camera.near);
-    // camera.projectionmatrix[11] = (-2 * camera.far * camera.near) / (camera.far - camera.near);
-    render(); // Re-render the scene with the new projection matrix
+    // camera.projectionmatrix[11] = (-2 * camera.far * camera.near) / (camera.far - camera.near);    
 });
 
 
